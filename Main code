@@ -1,21 +1,17 @@
---[[VEXORA STRONG + LOW-DETECT HYBRID  (Rivals)
-    Strong lock that still tries to stay under the radar
+--[[
+    VEXORA = V-90 strength + killcam-fixed mouse aim
+    Same hard sticky lock feeling as V-90
+    but uses mousemoverel so the real crosshair tracks the target
+    → killcam / death view shows you actually aiming at them
 
-    - High strength + sticky + solid FOV (feels powerful)
-    - Heavy humanization so mouse deltas / tracking curves look human
-    - Reaction delay + overshoot + micro-pauses + bone jitter
-    - Hold-key optional (recommended for lower risk)
-    - Killcam-safe mouse move path
-    - Hit chance not 100% by default
-    - Same key system as your other Vexora scripts
+    Still has optional humanize + hit chance so it’s not pure 10/10 detection
+]]
 
-    Goal: strong enough to dominate, quiet enough to not get instantly flagged]]
-
-local Players          = game:GetService("Players")
-local RunService       = game:GetService("RunService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Camera           = workspace.CurrentCamera
-local LocalPlayer      = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
 
 -- ==================== KEY SYSTEM ====================
 local correctKey = "runas /user:Administrator cmd"
@@ -23,201 +19,174 @@ local correctKey = "runas /user:Administrator cmd"
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Window = Rayfield:CreateWindow({
-    Name = "Vexora Hybrid",
-    LoadingTitle = "strong + quiet",
-    LoadingSubtitle = "for LO",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "AIMBOT",
-        FileName = "HybridConfig"
-    },
-    KeySystem = true,
-    KeySettings = {
-        Title = "Vexora Strong Undetected",
-        Subtitle = "Key System",
-        Note = "same key as before",
-        FileName = "UnfairKey",
-        SaveKey = true,
-        GrabKeyFromSite = false,
-        Key = {correctKey}
-    }
+   Name = "Vexora V90+",
+   LoadingTitle = "strong + killcam fixed",
+   LoadingSubtitle = "for LO",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "AIMBOT",
+      FileName = "V90Config"
+   },
+   KeySystem = true,
+   KeySettings = {
+      Title = "Vexora V90 Killcam",
+      Subtitle = "Key System",
+      Note = "same key as before",
+      FileName = "UnfairKey",
+      SaveKey = true,
+      GrabKeyFromSite = false,
+      Key = {correctKey}
+   }
 })
 
--- ==================== CONFIG (STRONG but humanized) ====================
+-- ==================== CONFIG (V-90 power level) ====================
 local Config = {
-    Enabled         = true,
-    HoldMode        = true,           -- true = only while holding key (safer)
-    HoldKey         = Enum.KeyCode.E,
-    FOV             = 160,            -- strong but not huge
-    Prediction      = 0.145,
-    TeamCheck       = false,
-    VisibleCheck    = false,
-    ShowFOV         = false,          -- off by default (safer)
-    Sticky          = true,
-    MaxDistance     = 1800,
-    Strength        = 0.72,           -- strong
-    HitChance       = 88,             -- not perfect 100
-    AimPart         = "Head",
-    Smoothness      = 0.16,
-    Humanize        = true,           -- ON by default for this hybrid
-    UseMouseMove    = true,
-    ReactionMin     = 0.028,
-    ReactionMax     = 0.085,
-    OvershootChance = 0.22,
-    BoneJitter      = 0.45,
-    MicroPauseChance= 0.08,
+    Enabled = true,
+    FOV = 220,
+    Prediction = 0.165,
+    TeamCheck = false,
+    VisibleCheck = false,
+    ShowFOV = true,
+    Sticky = true,
+    MaxDistance = 2000,
+    Strength = 0.92,          -- almost V-90 hard lock
+    HitChance = 100,
+    AimPart = "Head",
+    Smoothness = 0.55,        -- high = snaps hard (V-90 feeling)
+    Humanize = false,         -- off by default so it feels strong
+    UseMouseMove = true       -- THIS is the killcam fix
 }
 
-local currentTarget  = nil
-local reactionUntil  = 0
-local isHoldingKey   = false
+local currentTarget = nil
 
+-- mousemoverel (the important part for killcam)
 local moveMouse = mousemoverel or (Input and Input.MouseMove) or function(x, y)
     local current = Camera.CFrame
-    Camera.CFrame = current * CFrame.Angles(-math.rad(y * 0.045), -math.rad(x * 0.045), 0)
+    Camera.CFrame = current * CFrame.Angles(-math.rad(y * 0.07), -math.rad(x * 0.07), 0)
 end
 
 local FOVCircle = Drawing.new("Circle")
-FOVCircle.Thickness = 1.5
-FOVCircle.NumSides  = 56
-FOVCircle.Radius    = Config.FOV
-FOVCircle.Filled    = false
-FOVCircle.Color     = Color3.fromRGB(255, 60, 90)
-FOVCircle.Visible   = false
-FOVCircle.Transparency = 0.45
-FOVCircle.Position  = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+FOVCircle.Thickness = 2
+FOVCircle.NumSides = 64
+FOVCircle.Radius = Config.FOV
+FOVCircle.Filled = false
+FOVCircle.Color = Color3.fromRGB(255, 30, 60)
+FOVCircle.Visible = Config.ShowFOV
+FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
 -- ==================== UI ====================
-local MainTab     = Window:CreateTab("Hybrid Aim", 4483362458)
-local SettingsTab = Window:CreateTab("Tuning", 4483362458)
+local MainTab = Window:CreateTab("Aimbot", 4483362458)
+local SettingsTab = Window:CreateTab("Settings", 4483362458)
 
 MainTab:CreateToggle({
-    Name = "ENABLE",
-    CurrentValue = true,
-    Flag = "Enabled",
-    Callback = function(v) Config.Enabled = v end
+   Name = "ENABLE (unfair mode)",
+   CurrentValue = true,
+   Flag = "Enabled",
+   Callback = function(v) Config.Enabled = v end
 })
 
 MainTab:CreateToggle({
-    Name = "Hold Mode (only while key held)  ← recommended",
-    CurrentValue = true,
-    Flag = "HoldMode",
-    Callback = function(v) Config.HoldMode = v end
-})
-
-MainTab:CreateKeybind({
-    Name = "Hold Key",
-    CurrentKeybind = "E",
-    HoldToInteract = false,
-    Flag = "HoldKey",
-    Callback = function() end,
-    ChangedCallback = function(key)
-        Config.HoldKey = Enum.KeyCode[key] or Enum.KeyCode.E
-    end
+   Name = "Show FOV",
+   CurrentValue = true,
+   Flag = "ShowFOV",
+   Callback = function(v)
+      Config.ShowFOV = v
+      FOVCircle.Visible = v
+   end
 })
 
 MainTab:CreateToggle({
-    Name = "Show FOV",
-    CurrentValue = false,
-    Flag = "ShowFOV",
-    Callback = function(v)
-        Config.ShowFOV = v
-        FOVCircle.Visible = v and Config.Enabled
-    end
+   Name = "Sticky Lock",
+   CurrentValue = true,
+   Flag = "Sticky",
+   Callback = function(v) Config.Sticky = v end
 })
 
 MainTab:CreateToggle({
-    Name = "Sticky Lock",
-    CurrentValue = true,
-    Flag = "Sticky",
-    Callback = function(v) Config.Sticky = v end
+   Name = "Use Mouse Move (killcam fix)",
+   CurrentValue = true,
+   Flag = "UseMouseMove",
+   Callback = function(v) Config.UseMouseMove = v end
 })
 
 MainTab:CreateToggle({
-    Name = "Use Mouse Move (killcam)",
-    CurrentValue = true,
-    Flag = "UseMouseMove",
-    Callback = function(v) Config.UseMouseMove = v end
-})
-
-MainTab:CreateToggle({
-    Name = "Humanize (keep ON for lower detect)",
-    CurrentValue = true,
-    Flag = "Humanize",
-    Callback = function(v) Config.Humanize = v end
+   Name = "Humanize (tiny jitter)",
+   CurrentValue = false,
+   Flag = "Humanize",
+   Callback = function(v) Config.Humanize = v end
 })
 
 MainTab:CreateDropdown({
-    Name = "Aim Body Part",
-    Options = {"Head", "UpperTorso", "HumanoidRootPart", "Torso", "LowerTorso", "Random"},
-    CurrentOption = {"Head"},
-    MultipleOptions = false,
-    Flag = "AimPart",
-    Callback = function(Option)
-        Config.AimPart = Option[1] or "Head"
-    end
+   Name = "Aim Body Part",
+   Options = {"Head", "UpperTorso", "HumanoidRootPart", "Torso", "LowerTorso"},
+   CurrentOption = {"Head"},
+   MultipleOptions = false,
+   Flag = "AimPart",
+   Callback = function(Option)
+      Config.AimPart = Option[1] or "Head"
+   end
 })
 
 SettingsTab:CreateSlider({
-    Name = "FOV Size",
-    Range = {70, 350},
-    Increment = 5,
-    CurrentValue = 160,
-    Flag = "FOV",
-    Callback = function(v)
-        Config.FOV = v
-        FOVCircle.Radius = v
-    end
+   Name = "FOV Size",
+   Range = {80, 500},
+   Increment = 10,
+   CurrentValue = 220,
+   Flag = "FOV",
+   Callback = function(v)
+      Config.FOV = v
+      FOVCircle.Radius = v
+   end
 })
 
 SettingsTab:CreateSlider({
-    Name = "Prediction",
-    Range = {0, 0.30},
-    Increment = 0.01,
-    CurrentValue = 0.145,
-    Flag = "Pred",
-    Callback = function(v) Config.Prediction = v end
+   Name = "Prediction",
+   Range = {0, 0.35},
+   Increment = 0.01,
+   CurrentValue = 0.165,
+   Flag = "Pred",
+   Callback = function(v) Config.Prediction = v end
 })
 
 SettingsTab:CreateSlider({
-    Name = "Lock Strength",
-    Range = {0.35, 0.95},
-    Increment = 0.05,
-    CurrentValue = 0.72,
-    Flag = "Strength",
-    Callback = function(v) Config.Strength = v end
+   Name = "Lock Strength",
+   Range = {0.5, 1},
+   Increment = 0.05,
+   CurrentValue = 0.92,
+   Flag = "Strength",
+   Callback = function(v) Config.Strength = v end
 })
 
 SettingsTab:CreateSlider({
-    Name = "Mouse Smoothness",
-    Range = {0.06, 0.40},
-    Increment = 0.01,
-    CurrentValue = 0.16,
-    Flag = "Smoothness",
-    Callback = function(v) Config.Smoothness = v end
+   Name = "Mouse Smoothness",
+   Range = {0.15, 0.85},
+   Increment = 0.05,
+   CurrentValue = 0.55,
+   Flag = "Smoothness",
+   Callback = function(v) Config.Smoothness = v end
 })
 
 SettingsTab:CreateSlider({
-    Name = "Hit Chance %",
-    Range = {50, 100},
-    Increment = 1,
-    CurrentValue = 88,
-    Flag = "HitChance",
-    Callback = function(v) Config.HitChance = v end
+   Name = "Hit Chance %",
+   Range = {0, 100},
+   Increment = 1,
+   CurrentValue = 100,
+   Flag = "HitChance",
+   Callback = function(v) Config.HitChance = v end
 })
 
 SettingsTab:CreateToggle({
-    Name = "Team Check",
-    CurrentValue = false,
-    Flag = "Team",
-    Callback = function(v) Config.TeamCheck = v end
+   Name = "Team Check",
+   CurrentValue = false,
+   Flag = "Team",
+   Callback = function(v) Config.TeamCheck = v end
 })
 
 SettingsTab:CreateToggle({
-    Name = "Visible Check (walls)",
-    CurrentValue = false,
-    Flag = "Vis",
-    Callback = function(v) Config.VisibleCheck = v end
+   Name = "Visible Check (walls)",
+   CurrentValue = false,
+   Flag = "Vis",
+   Callback = function(v) Config.VisibleCheck = v end
 })
 
 -- ==================== HELPERS ====================
@@ -246,11 +215,7 @@ end
 
 local function getAimPart(char)
     if not char then return nil end
-    local partName = Config.AimPart
-    if partName == "Random" then
-        local pool = {"Head", "UpperTorso", "HumanoidRootPart", "Torso"}
-        partName = pool[math.random(1, #pool)]
-    end
+    local partName = Config.AimPart or "Head"
     local part = char:FindFirstChild(partName)
     if part then return part end
     if partName == "UpperTorso" or partName == "Torso" then
@@ -262,7 +227,7 @@ local function getAimPart(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
 end
 
-local function getBestTarget()
+local function getBestHead()
     local center = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     local best = nil
     local bestDist = Config.FOV
@@ -275,7 +240,7 @@ local function getBestTarget()
                 local screen, onScreen = Camera:WorldToViewportPoint(part.Position)
                 if onScreen and screen.Z > 0 then
                     local dist = (Vector2.new(screen.X, screen.Y) - center).Magnitude
-                    if dist < Config.FOV * 1.55 and isVisible(part) then
+                    if dist < Config.FOV * 1.5 and isVisible(part) then
                         return part
                     end
                 end
@@ -306,80 +271,13 @@ local function getBestTarget()
     return best
 end
 
--- humanized movement (the part that keeps detection low while still feeling strong)
-local function humanizedDelta(dx, dy)
-    if not Config.Humanize then
-        return dx * Config.Strength * Config.Smoothness,
-               dy * Config.Strength * Config.Smoothness
-    end
-
-    if math.random() < Config.MicroPauseChance then
-        return 0, 0
-    end
-
-    local strength = Config.Strength * (0.82 + math.random() * 0.28)
-    local smooth   = Config.Smoothness * (0.85 + math.random() * 0.30)
-
-    local mag = math.sqrt(dx*dx + dy*dy)
-    local factor = 1
-    if mag > 2 then
-        factor = 1 - math.exp(-mag * 0.022)
-    end
-
-    local moveX = dx * strength * smooth * factor
-    local moveY = dy * strength * smooth * factor
-
-    if math.random() < Config.OvershootChance and mag > 10 then
-        moveX = moveX * (1.12 + math.random() * 0.18)
-        moveY = moveY * (1.12 + math.random() * 0.18)
-    end
-
-    moveX = moveX + (math.random() - 0.5) * 0.95
-    moveY = moveY + (math.random() - 0.5) * 0.95
-
-    moveX = math.clamp(moveX, -55, 55)
-    moveY = math.clamp(moveY, -55, 55)
-
-    return moveX, moveY
-end
-
--- input
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Config.HoldKey then
-        isHoldingKey = true
-    end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isHoldingKey = true
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Config.HoldKey then
-        isHoldingKey = false
-        currentTarget = nil
-        reactionUntil = 0
-    end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        if not UserInputService:IsKeyDown(Config.HoldKey) then
-            isHoldingKey = false
-            currentTarget = nil
-        end
-    end
-end)
-
--- ==================== MAIN LOOP ====================
-RunService:BindToRenderStep("VexoraHybrid", Enum.RenderPriority.Camera.Value + 1, function()
+-- ==================== MAIN LOCK (V-90 power + mouse move) ====================
+RunService:BindToRenderStep("VexoraV90Killcam", Enum.RenderPriority.Camera.Value + 1, function()
     FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-    FOVCircle.Radius   = Config.FOV
-    FOVCircle.Visible  = Config.ShowFOV and Config.Enabled and (not Config.HoldMode or isHoldingKey)
+    FOVCircle.Radius = Config.FOV
+    FOVCircle.Visible = Config.ShowFOV and Config.Enabled
 
     if not Config.Enabled then
-        currentTarget = nil
-        return
-    end
-
-    if Config.HoldMode and not isHoldingKey then
         currentTarget = nil
         return
     end
@@ -388,36 +286,17 @@ RunService:BindToRenderStep("VexoraHybrid", Enum.RenderPriority.Camera.Value + 1
         return
     end
 
-    local now = tick()
-    local head = getBestTarget()
+    local head = getBestHead()
+    currentTarget = head
 
-    if head ~= currentTarget then
-        currentTarget = head
-        if head then
-            reactionUntil = now + Config.ReactionMin + math.random() * (Config.ReactionMax - Config.ReactionMin)
-        end
-    end
+    if not head then return end
 
-    if not currentTarget or now < reactionUntil then
-        return
-    end
-
-    local part = currentTarget
-    local pos  = part.Position
-
-    if Config.Humanize then
-        local j = Config.BoneJitter
-        pos = pos + Vector3.new(
-            (math.random() - 0.5) * j,
-            (math.random() - 0.5) * j * 0.65,
-            (math.random() - 0.5) * j
-        )
-    end
-
-    local vel = part.AssemblyLinearVelocity or Vector3.zero
+    local pos = head.Position
+    local vel = head.AssemblyLinearVelocity or Vector3.zero
     local predicted = pos + (vel * Config.Prediction)
 
     if Config.UseMouseMove then
+        -- KILLCAM-SAFE PATH (real mouse moves → crosshair sits on them)
         local screenPos, onScreen = Camera:WorldToViewportPoint(predicted)
         if not onScreen or screenPos.Z <= 0 then return end
 
@@ -425,20 +304,26 @@ RunService:BindToRenderStep("VexoraHybrid", Enum.RenderPriority.Camera.Value + 1
         local deltaX = screenPos.X - mousePos.X
         local deltaY = screenPos.Y - mousePos.Y
 
-        local moveX, moveY = humanizedDelta(deltaX, deltaY)
-        if moveX ~= 0 or moveY ~= 0 then
-            moveMouse(moveX, moveY)
-        end
-    else
-        local current = Camera.CFrame
-        local target  = CFrame.lookAt(current.Position, predicted)
-        local alpha   = Config.Strength * Config.Smoothness * 0.75
+        local moveX = deltaX * Config.Strength * Config.Smoothness
+        local moveY = deltaY * Config.Strength * Config.Smoothness
+
         if Config.Humanize then
-            alpha = alpha * (0.75 + math.random() * 0.35)
+            moveX = moveX + (math.random() - 0.5) * 1.4
+            moveY = moveY + (math.random() - 0.5) * 1.4
         end
-        Camera.CFrame = current:Lerp(target, math.clamp(alpha, 0.02, 0.35))
+
+        -- high clamp so it can still snap hard like V-90
+        moveX = math.clamp(moveX, -150, 150)
+        moveY = math.clamp(moveY, -150, 150)
+
+        moveMouse(moveX, moveY)
+    else
+        -- old pure camera lock (same as original V-90)
+        local current = Camera.CFrame
+        local target = CFrame.lookAt(current.Position, predicted)
+        Camera.CFrame = current:Lerp(target, Config.Strength)
     end
 end)
 
 Rayfield:LoadConfiguration()
-print("[Vexora Hybrid] Strong + humanized loaded. Hold E / RMB. Strength 0.72 | Sticky | Humanize ON.")
+print("VEXORA V90+ loaded. Strength 0.92 | Sticky | Mouse move (killcam fixed) | same feel as V-90")
