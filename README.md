@@ -1,2 +1,2 @@
-# O-k
+# Vexora.lua
 0.145
